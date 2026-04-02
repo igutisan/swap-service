@@ -9,8 +9,6 @@ import (
 	"swap/iguti/swap-service/internal/utils"
 )
 
-// ValidationMiddleware crea un middleware que valida el body JSON
-// Uso: router.POST("/endpoint", ValidationMiddleware(&dto.MyRequest{}), handler)
 func ValidationMiddleware(requestStruct interface{}) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Crear una nueva instancia del tipo de request

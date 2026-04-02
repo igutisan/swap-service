@@ -30,9 +30,9 @@ services:
     environment:
       # Database configuration
       DB_HOST: postgres
-      DB_USER: swap_user
-      DB_PASSWORD: swap_password
-      DB_NAME: swap_service
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
       DB_PORT: 5432
       DB_SSLMODE: disable
       
@@ -41,12 +41,12 @@ services:
       GIN_MODE: release
       
       # JWT Secret (change in production)
-      JWT_SECRET: your-secret-key-change-in-production
+      JWT_SECRET: ${JWT_SECRET}
       
       # Cloudinary (optional)
-      CLOUDINARY_CLOUD_NAME: dhin28wnq
-      CLOUDINARY_API_KEY: 393652296977735
-      CLOUDINARY_API_SECRET: gP75NdwVeHTypu3Gf2EnAmKswa8
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET}
     ports:
       - "8080:8080"
     depends_on:

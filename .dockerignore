@@ -1,0 +1,40 @@
+# Git
+.git
+.gitignore
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+
+# Docs
+*.md
+!README.md
+
+# Tests
+*_test.go
+*.test
+
+# Go
+go.work
+vendor/
+
+# Build artifacts
+*.out
+/bin/
+/dist/
+
+# Logs
+*.log
+
+# Database
+*.db
+*.sqlite

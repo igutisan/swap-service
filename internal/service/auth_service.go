@@ -1,0 +1,125 @@
+package service
+
+import (
+	"context"
+	"fmt"
+	"strings"
+
+	"swap/iguti/swap-service/internal/domain"
+	"swap/iguti/swap-service/internal/utils"
+)
+
+type authService struct {
+	userRepo    domain.UserRepository
+	companyRepo domain.CompanyRepository
+}
+
+func NewAuthService(userRepo domain.UserRepository, companyRepo domain.CompanyRepository) domain.AuthService {
+	return &authService{
+		userRepo:    userRepo,
+		companyRepo: companyRepo,
+	}
+}
+
+func (s *authService) RegisterUser(ctx context.Context, name, email, password, phone string) (*domain.User, error) {
+	email = strings.ToLower(strings.TrimSpace(email))
+
+	existingUser, err := s.userRepo.GetByEmail(ctx, email)
+	if err == nil && existingUser != nil {
+		return nil, domain.ErrEmailAlreadyExist
+	}
+
+	hashedPassword, err := utils.HashPassword(password)
+	if err != nil {
+		return nil, fmt.Errorf("error al procesar la contraseña: %w", err)
+	}
+
+	user := &domain.User{
+		Name:     name,
+		Email:    email,
+		Password: hashedPassword,
+		Phone:    phone,
+	}
+
+	if err := s.userRepo.Create(ctx, user); err != nil {
+		return nil, fmt.Errorf("error al crear usuario: %w", err)
+	}
+
+	return user, nil
+}
+
+func (s *authService) Login(ctx context.Context, email, password string) (*domain.User, string, error) {
+
+	email = strings.ToLower(strings.TrimSpace(email))
+
+	user, err := s.userRepo.GetByEmail(ctx, email)
+	if err != nil {
+		return nil, "", domain.ErrUserNotFound
+	}
+
+	if !utils.CheckPasswordHash(password, user.Password) {
+		return nil, "", domain.ErrInvalidPassword
+	}
+
+	token, err := utils.GenerateJWT(user.ID, user.Email)
+	if err != nil {
+		return nil, "", fmt.Errorf("error al generar token: %w", err)
+	}
+
+	return user, token, nil
+}
+
+// RegisterCompany registra una nueva empresa en el sistema
+func (s *authService) RegisterCompany(ctx context.Context, name, email, password, phone, address string, lat, lng float64) (*domain.Company, error) {
+	email = strings.ToLower(strings.TrimSpace(email))
+
+	// Verificar si ya existe una empresa con ese email
+	existingCompany, err := s.companyRepo.GetByEmail(ctx, email)
+	if err == nil && existingCompany != nil {
+		return nil, domain.ErrEmailAlreadyExist
+	}
+
+	// Hashear contraseña
+	hashedPassword, err := utils.HashPassword(password)
+	if err != nil {
+		return nil, fmt.Errorf("error al procesar la contraseña: %w", err)
+	}
+
+	// Crear empresa
+	company := &domain.Company{
+		Name:     name,
+		Email:    email,
+		Password: hashedPassword,
+		Phone:    phone,
+		Address:  address,
+		Lat:      lat,
+		Lng:      lng,
+	}
+
+	if err := s.companyRepo.Create(ctx, company); err != nil {
+		return nil, fmt.Errorf("error al crear empresa: %w", err)
+	}
+
+	return company, nil
+}
+
+// LoginCompany autentica una empresa y retorna un token JWT
+func (s *authService) LoginCompany(ctx context.Context, email, password string) (*domain.Company, string, error) {
+	email = strings.ToLower(strings.TrimSpace(email))
+
+	company, err := s.companyRepo.GetByEmail(ctx, email)
+	if err != nil {
+		return nil, "", domain.ErrCompanyNotFound
+	}
+
+	if !utils.CheckPasswordHash(password, company.Password) {
+		return nil, "", domain.ErrInvalidPassword
+	}
+
+	token, err := utils.GenerateCompanyJWT(company.ID, company.Email)
+	if err != nil {
+		return nil, "", fmt.Errorf("error al generar token: %w", err)
+	}
+
+	return company, token, nil
+}

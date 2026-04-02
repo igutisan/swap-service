@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database with PostGIS
+  postgres:
+    image: postgis/postgis:16-3.4-alpine
+    container_name: swap-postgres
+    environment:
+      POSTGRES_USER: swap_user
+      POSTGRES_PASSWORD: swap_password
+      POSTGRES_DB: swap_service
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - swap-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U swap_user -d swap_service"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Go Application
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: swap-api
+    environment:
+      # Database configuration
+      DB_HOST: postgres
+      DB_USER: swap_user
+      DB_PASSWORD: swap_password
+      DB_NAME: swap_service
+      DB_PORT: 5432
+      DB_SSLMODE: disable
+      
+      # Application configuration
+      PORT: 8080
+      GIN_MODE: release
+      
+      # JWT Secret (change in production)
+      JWT_SECRET: your-secret-key-change-in-production
+      
+      # Cloudinary (optional)
+      CLOUDINARY_CLOUD_NAME: dhin28wnq
+      CLOUDINARY_API_KEY: 393652296977735
+      CLOUDINARY_API_SECRET: gP75NdwVeHTypu3Gf2EnAmKswa8
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - swap-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+
+networks:
+  swap-network:
+    driver: bridge

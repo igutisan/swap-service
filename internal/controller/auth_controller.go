@@ -8,6 +8,7 @@ import (
 	"swap/iguti/swap-service/internal/domain"
 	"swap/iguti/swap-service/internal/dto"
 	"swap/iguti/swap-service/internal/middleware"
+	"swap/iguti/swap-service/internal/utils"
 )
 
 // AuthController maneja los endpoints de autenticación
@@ -22,7 +23,6 @@ func NewAuthController(authService domain.AuthService) *AuthController {
 	}
 }
 
-// Register godoc
 // @Summary Registra un nuevo usuario
 // @Description Crea una nueva cuenta de usuario con email y contraseña
 // @Tags auth
@@ -102,6 +102,7 @@ func (c *AuthController) Login(ctx *gin.Context) {
 		Token:     token,
 		TokenType: "Bearer",
 		ExpiresIn: 86400,
+		ActorType: utils.ActorTypeUser,
 		User: dto.UserInfo{
 			ID:    user.ID,
 			Name:  user.Name,
@@ -224,6 +225,7 @@ func (c *AuthController) LoginCompany(ctx *gin.Context) {
 		Token:     token,
 		TokenType: "Bearer",
 		ExpiresIn: 86400,
+		ActorType: utils.ActorTypeCompany,
 		Company: dto.CompanyInfo{
 			ID:      company.ID,
 			Name:    company.Name,

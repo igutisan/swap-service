@@ -61,7 +61,7 @@ func (s *authService) Login(ctx context.Context, email, password string) (*domai
 		return nil, "", domain.ErrInvalidPassword
 	}
 
-	token, err := utils.GenerateJWT(user.ID, user.Email)
+	token, err := utils.GenerateAuthJWT(user.ID, user.Email, utils.ActorTypeUser)
 	if err != nil {
 		return nil, "", fmt.Errorf("error al generar token: %w", err)
 	}
@@ -116,7 +116,7 @@ func (s *authService) LoginCompany(ctx context.Context, email, password string) 
 		return nil, "", domain.ErrInvalidPassword
 	}
 
-	token, err := utils.GenerateCompanyJWT(company.ID, company.Email)
+	token, err := utils.GenerateAuthJWT(company.ID, company.Email, utils.ActorTypeCompany)
 	if err != nil {
 		return nil, "", fmt.Errorf("error al generar token: %w", err)
 	}

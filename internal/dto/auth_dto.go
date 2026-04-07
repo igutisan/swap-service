@@ -34,6 +34,7 @@ type LoginData struct {
 	Token     string   `json:"token"`
 	TokenType string   `json:"token_type"`
 	ExpiresIn int64    `json:"expires_in"`
+	ActorType string   `json:"actor_type"`
 	User      UserInfo `json:"user"`
 }
 
@@ -83,6 +84,7 @@ type CompanyLoginData struct {
 	Token     string      `json:"token"`
 	TokenType string      `json:"token_type"`
 	ExpiresIn int64       `json:"expires_in"`
+	ActorType string      `json:"actor_type"`
 	Company   CompanyInfo `json:"company"`
 }
 

@@ -45,15 +45,6 @@ func (r *dishRepository) GetActiveByCompanyID(ctx context.Context, companyID uui
 	return dishes, err
 }
 
-func (r *dishRepository) GetAllActive(ctx context.Context) ([]domain.Dish, error) {
-	var dishes []domain.Dish
-	err := r.db.WithContext(ctx).
-		Where("is_active = ?", true).
-		Preload("Company").
-		Find(&dishes).Error
-	return dishes, err
-}
-
 func (r *dishRepository) Update(ctx context.Context, dish *domain.Dish) error {
 	return r.db.WithContext(ctx).Save(dish).Error
 }

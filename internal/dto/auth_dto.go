@@ -50,13 +50,11 @@ type UserInfo struct {
 
 // RegisterCompanyRequest representa la petición para registrar una nueva empresa
 type RegisterCompanyRequest struct {
-	Name     string  `json:"name" validate:"required,min=2,max=100"`
-	Email    string  `json:"email" validate:"required,email,max=255"`
-	Password string  `json:"password" validate:"required,min=8,max=100"`
-	Phone    string  `json:"phone" validate:"omitempty,max=50"`
-	Address  string  `json:"address" validate:"required,max=500"`
-	Lat      float64 `json:"lat" validate:"required"`
-	Lng      float64 `json:"lng" validate:"required"`
+	Name     string `json:"name" validate:"required,min=2,max=100"`
+	Email    string `json:"email" validate:"required,email,max=255"`
+	Password string `json:"password" validate:"required,min=8,max=100"`
+	Phone    string `json:"phone" validate:"omitempty,max=50"`
+	Address  string `json:"address" validate:"required,max=500"`
 }
 
 // LoginCompanyRequest representa la petición para iniciar sesión como empresa

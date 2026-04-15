@@ -1,7 +1,7 @@
 package domain
 
 const (
-	MaxRadiusKm     = 100
+	MaxRadiusKm     = 50
 	DefaultRadiusKm = 10
 	MinRadiusKm     = 1
 
@@ -10,4 +10,9 @@ const (
 	MinPerPage     = 1
 
 	MaxLikesPerSession = 3
+
+	MinLatitude  = -90.0
+	MaxLatitude  = 90.0
+	MinLongitude = -180.0
+	MaxLongitude = 180.0
 )

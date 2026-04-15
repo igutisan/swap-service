@@ -33,6 +33,10 @@ func NewSwipeSessionService(
 }
 
 func (s *swipeSessionService) Create(ctx context.Context, userID uuid.UUID, userLat float64, userLng float64, radiusKm int) (*domain.SwipeSession, error) {
+	if userLat == 0 && userLng == 0 {
+		return nil, fmt.Errorf("coordenadas inválidas: latitud y longitud no pueden ser ambas cero")
+	}
+
 	if radiusKm < domain.MinRadiusKm || radiusKm > domain.MaxRadiusKm {
 		return nil, fmt.Errorf("el radio debe estar entre %d y %d km", domain.MinRadiusKm, domain.MaxRadiusKm)
 	}

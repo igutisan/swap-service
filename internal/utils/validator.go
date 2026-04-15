@@ -20,6 +20,7 @@ func NewValidator() *Validator {
 	// Registrar validaciones personalizadas
 	validate.RegisterValidation("latitude", validateLatitude)
 	validate.RegisterValidation("longitude", validateLongitude)
+	validate.RegisterValidation("not_zero", validateNotZero)
 
 	return &Validator{
 		validate: validate,
@@ -42,6 +43,15 @@ func validateLongitude(fl validator.FieldLevel) bool {
 		return false
 	}
 	return lng >= -180 && lng <= 180
+}
+
+// validateNotZero valida que el valor no sea cero
+func validateNotZero(fl validator.FieldLevel) bool {
+	lat, ok := fl.Field().Interface().(float64)
+	if !ok {
+		return true
+	}
+	return lat != 0
 }
 
 // ValidateStruct valida una estructura y retorna un error formateado
@@ -94,6 +104,8 @@ func (v *Validator) getErrorMessage(field, tag, param string) string {
 		return fmt.Sprintf("El campo '%s' debe ser una latitud válida entre -90 y 90", field)
 	case "longitude":
 		return fmt.Sprintf("El campo '%s' debe ser una longitud válida entre -180 y 180", field)
+	case "not_zero":
+		return fmt.Sprintf("El campo '%s' no puede ser cero", field)
 	default:
 		return fmt.Sprintf("El campo '%s' no cumple con la validación '%s'", field, tag)
 	}

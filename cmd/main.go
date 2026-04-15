@@ -74,6 +74,7 @@ type Services struct {
 	DishService         domain.DishService
 	SwipeSessionService domain.SwipeSessionService
 	UploadService       service.UploadService
+	GeocodingService    service.GeocodingService
 }
 
 // Controllers contiene todos los controladores de la aplicación
@@ -148,7 +149,6 @@ func setupRepositories(db *gorm.DB) *Repositories {
 }
 
 func setupServices(repos *Repositories, txManager interface{}) *Services {
-	// Configurar Cloudinary
 	cloudinaryConfig := config.NewCloudinaryConfig()
 	uploadService, err := service.NewCloudinaryService(cloudinaryConfig)
 	if err != nil {
@@ -156,11 +156,14 @@ func setupServices(repos *Repositories, txManager interface{}) *Services {
 		uploadService = nil
 	}
 
+	geocodingService := service.NewGeocodingService()
+
 	return &Services{
-		AuthService:         service.NewAuthService(repos.UserRepo, repos.CompanyRepo),
+		AuthService:         service.NewAuthService(repos.UserRepo, repos.CompanyRepo, geocodingService),
 		DishService:         service.NewDishService(repos.DishRepo, repos.CompanyRepo),
 		SwipeSessionService: service.NewSwipeSessionService(repos.SwipeSessionRepo, repos.DishRepo, repos.SwipeActionRepo, repos.MatchRepo, txManager),
 		UploadService:       uploadService,
+		GeocodingService:    geocodingService,
 	}
 }
 

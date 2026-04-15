@@ -163,12 +163,18 @@ func (c *AuthController) SetupProfileRoutes(router *gin.RouterGroup, userAuthMid
 func (c *AuthController) RegisterCompany(ctx *gin.Context) {
 	req := middleware.GetValidatedRequest(ctx).(*dto.RegisterCompanyRequest)
 
-	company, err := c.authService.RegisterCompany(ctx, req.Name, req.Email, req.Password, req.Phone, req.Address, req.Lat, req.Lng)
+	company, err := c.authService.RegisterCompany(ctx, req.Name, req.Email, req.Password, req.Phone, req.Address)
 	if err != nil {
 		switch {
 		case errors.Is(err, domain.ErrEmailAlreadyExist):
 			resp := dto.ErrorResponse(409, "EMAIL_EXISTS: El email ya está registrado")
 			ctx.JSON(http.StatusConflict, resp)
+		case errors.Is(err, domain.ErrGeocodingNotFound):
+			resp := dto.ErrorResponse(400, "ADDRESS_NOT_FOUND: No se pudo encontrar la dirección. Por favor verifica e intenta con una dirección más específica.")
+			ctx.JSON(http.StatusBadRequest, resp)
+		case errors.Is(err, domain.ErrGeocodingEmptyAddress):
+			resp := dto.ErrorResponse(400, "EMPTY_ADDRESS: La dirección no puede estar vacía")
+			ctx.JSON(http.StatusBadRequest, resp)
 		default:
 			resp := dto.ErrorResponse(500, "INTERNAL_ERROR: Error interno del servidor", dto.WithErrors(err.Error()))
 			ctx.JSON(http.StatusInternalServerError, resp)

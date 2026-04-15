@@ -10,20 +10,24 @@ import (
 
 // Errores de dominio comunes
 var (
-	ErrUserNotFound            = errors.New("usuario no encontrado")
-	ErrCompanyNotFound         = errors.New("compañía no encontrada")
-	ErrDishNotFound            = errors.New("plato no encontrado")
-	ErrSessionNotFound         = errors.New("sesión no encontrada")
-	ErrEmailAlreadyExist       = errors.New("el email ya está registrado")
-	ErrInvalidPassword         = errors.New("contraseña inválida")
-	ErrValidation              = errors.New("error de validación")
-	ErrUnauthorizedSession     = errors.New("no tienes permiso para acceder a esta sesión")
-	ErrSessionNotActive        = errors.New("la sesión no está activa")
-	ErrInvalidRadius           = errors.New("radio de búsqueda inválido")
-	ErrMaxLikesReached         = errors.New("has alcanzado el máximo de 3 likes por sesión")
-	ErrDishAlreadySwiped       = errors.New("ya has hecho swipe en este plato")
-	ErrDishNotInFinalists      = errors.New("el plato no está entre los finalistas de esta sesión")
-	ErrSessionAlreadyCompleted = errors.New("la sesión ya está completada")
+	ErrUserNotFound              = errors.New("usuario no encontrado")
+	ErrCompanyNotFound           = errors.New("compañía no encontrada")
+	ErrDishNotFound              = errors.New("plato no encontrado")
+	ErrSessionNotFound           = errors.New("sesión no encontrada")
+	ErrEmailAlreadyExist         = errors.New("el email ya está registrado")
+	ErrInvalidPassword           = errors.New("contraseña inválida")
+	ErrValidation                = errors.New("error de validación")
+	ErrUnauthorizedSession       = errors.New("no tienes permiso para acceder a esta sesión")
+	ErrSessionNotActive          = errors.New("la sesión no está activa")
+	ErrInvalidRadius             = errors.New("radio de búsqueda inválido")
+	ErrMaxLikesReached           = errors.New("has alcanzado el máximo de 3 likes por sesión")
+	ErrDishAlreadySwiped         = errors.New("ya has hecho swipe en este plato")
+	ErrDishNotInFinalists        = errors.New("el plato no está entre los finalistas de esta sesión")
+	ErrSessionAlreadyCompleted   = errors.New("la sesión ya está completada")
+	ErrGeocodingEmptyAddress     = errors.New("la dirección no puede estar vacía")
+	ErrGeocodingNotFound         = errors.New("no se encontraron coordenadas para la dirección proporcionada")
+	ErrGeocodingInvalidLatitude  = errors.New("la latitud está fuera del rango válido (-90 a 90)")
+	ErrGeocodingInvalidLongitude = errors.New("la longitud está fuera del rango válido (-180 a 180)")
 )
 
 // TransactionManager define las operaciones para manejar transacciones
@@ -57,7 +61,6 @@ type DishRepository interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*Dish, error)
 	GetByCompanyID(ctx context.Context, companyID uuid.UUID) ([]Dish, error)
 	GetActiveByCompanyID(ctx context.Context, companyID uuid.UUID) ([]Dish, error)
-	GetAllActive(ctx context.Context) ([]Dish, error)
 	GetAvailableForFeed(ctx context.Context, params FeedParams) ([]Dish, int64, error)
 	Update(ctx context.Context, dish *Dish) error
 	Delete(ctx context.Context, id uuid.UUID) error
@@ -102,7 +105,7 @@ type MatchRepository interface {
 type AuthService interface {
 	RegisterUser(ctx context.Context, name, email, password, phone string) (*User, error)
 	Login(ctx context.Context, email, password string) (*User, string, error)
-	RegisterCompany(ctx context.Context, name, email, password, phone, address string, lat, lng float64) (*Company, error)
+	RegisterCompany(ctx context.Context, name, email, password, phone, address string) (*Company, error)
 	LoginCompany(ctx context.Context, email, password string) (*Company, string, error)
 }
 

@@ -10,14 +10,16 @@ import (
 )
 
 type authService struct {
-	userRepo    domain.UserRepository
-	companyRepo domain.CompanyRepository
+	userRepo         domain.UserRepository
+	companyRepo      domain.CompanyRepository
+	geocodingService GeocodingService
 }
 
-func NewAuthService(userRepo domain.UserRepository, companyRepo domain.CompanyRepository) domain.AuthService {
+func NewAuthService(userRepo domain.UserRepository, companyRepo domain.CompanyRepository, geocodingService GeocodingService) domain.AuthService {
 	return &authService{
-		userRepo:    userRepo,
-		companyRepo: companyRepo,
+		userRepo:         userRepo,
+		companyRepo:      companyRepo,
+		geocodingService: geocodingService,
 	}
 }
 
@@ -70,30 +72,32 @@ func (s *authService) Login(ctx context.Context, email, password string) (*domai
 }
 
 // RegisterCompany registra una nueva empresa en el sistema
-func (s *authService) RegisterCompany(ctx context.Context, name, email, password, phone, address string, lat, lng float64) (*domain.Company, error) {
+func (s *authService) RegisterCompany(ctx context.Context, name, email, password, phone, address string) (*domain.Company, error) {
 	email = strings.ToLower(strings.TrimSpace(email))
 
-	// Verificar si ya existe una empresa con ese email
 	existingCompany, err := s.companyRepo.GetByEmail(ctx, email)
 	if err == nil && existingCompany != nil {
 		return nil, domain.ErrEmailAlreadyExist
 	}
 
-	// Hashear contraseña
+	geocodeResult, err := s.geocodingService.Geocode(ctx, address)
+	if err != nil {
+		return nil, err
+	}
+
 	hashedPassword, err := utils.HashPassword(password)
 	if err != nil {
 		return nil, fmt.Errorf("error al procesar la contraseña: %w", err)
 	}
 
-	// Crear empresa
 	company := &domain.Company{
 		Name:     name,
 		Email:    email,
 		Password: hashedPassword,
 		Phone:    phone,
 		Address:  address,
-		Lat:      lat,
-		Lng:      lng,
+		Lat:      geocodeResult.Lat,
+		Lng:      geocodeResult.Lng,
 	}
 
 	if err := s.companyRepo.Create(ctx, company); err != nil {

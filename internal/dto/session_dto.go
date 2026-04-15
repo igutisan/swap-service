@@ -8,8 +8,8 @@ import (
 
 // CreateSessionRequest representa la petición para crear una sesión de swipe
 type CreateSessionRequest struct {
-	UserLat  float64 `json:"user_lat" validate:"required,latitude"`
-	UserLng  float64 `json:"user_lng" validate:"required,longitude"`
+	UserLat  float64 `json:"user_lat" validate:"required,latitude,not_zero"`
+	UserLng  float64 `json:"user_lng" validate:"required,longitude,not_zero"`
 	RadiusKm int     `json:"radius_km" validate:"required,min=1,max=50"`
 }
 

@@ -66,10 +66,6 @@ func (s *cloudinaryService) GeneratePresignedURL(ctx context.Context, folder, fi
 		"signature": signature,
 	}
 
-	// Agregar opciones adicionales para imágenes
-	fields["quality"] = "auto"
-	fields["fetch_format"] = "auto"
-
 	return &dto.PresignedURLData{
 		URL:       uploadURL,
 		Fields:    fields,

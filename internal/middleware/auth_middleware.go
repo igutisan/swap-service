@@ -76,7 +76,7 @@ func AuthMiddleware(userRepo domain.UserRepository) gin.HandlerFunc {
 		}
 
 		// Guardar información del usuario en el contexto
-		c.Set("userID", userID)
+		c.Set("userID", userID.String())
 		c.Set("userEmail", claims.Email)
 		c.Set("actorType", claims.ActorType)
 		c.Set("user", user) // Guardar el objeto usuario completo para uso posterior

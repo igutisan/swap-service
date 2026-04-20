@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -72,48 +73,55 @@ func (r *dishRepository) GetAvailableForFeed(ctx context.Context, params domain.
 	var dishes []domain.Dish
 	var total int64
 
-	userPoint := fmt.Sprintf("ST_MakePoint(%f, %f)", params.UserLng, params.UserLat)
+	userLng := params.UserLng
+	userLat := params.UserLat
 	radiusMeters := float64(params.RadiusKm) * 1000
 
-	subQuery := r.db.WithContext(ctx).
+	subquerySwiped := r.db.WithContext(ctx).
 		Table("swipe_actions").
 		Select("dish_id").
 		Where("session_id = ?", params.SessionID)
 
-	distanceCondition := fmt.Sprintf(`
-		ST_DWithin(
-			ST_MakePoint(c.lng, c.lat)::geography,
-			%s::geography,
-			%f
-		)
-	`, userPoint, radiusMeters)
-
-	query := r.db.WithContext(ctx).
-		Table("dishes d").
-		Select("d.*").
-		Joins("INNER JOIN companies c ON d.company_id = c.id").
-		Where("d.is_active = ?", true).
-		Where("d.id NOT IN (?)", subQuery).
-		Where(distanceCondition)
-
-	countQuery := r.db.WithContext(ctx).
+	r.db.WithContext(ctx).
+		Model(&domain.Dish{}).
 		Table("dishes d").
 		Joins("INNER JOIN companies c ON d.company_id = c.id").
 		Where("d.is_active = ?", true).
-		Where("d.id NOT IN (?)", subQuery).
-		Where(distanceCondition)
+		Where("d.id NOT IN (?)", subquerySwiped).
+		Where(fmt.Sprintf(`
+			ST_DWithin(
+				ST_MakePoint(c.lng, c.lat)::geography,
+				ST_MakePoint(%f, %f)::geography,
+				%f
+			)
+		`, userLng, userLat, radiusMeters)).
+		Count(&total)
 
-	if err := countQuery.Count(&total).Error; err != nil {
-		return nil, 0, fmt.Errorf("error al contar platos disponibles: %w", err)
-	}
-
-	if err := query.Order("d.created_at DESC").
+	err := r.db.WithContext(ctx).
+		Model(&domain.Dish{}).
+		Table("dishes d").
+		Joins("INNER JOIN companies c ON d.company_id = c.id").
+		Where("d.is_active = ?", true).
+		Where("d.id NOT IN (?)", subquerySwiped).
+		Where(fmt.Sprintf(`
+			ST_DWithin(
+				ST_MakePoint(c.lng, c.lat)::geography,
+				ST_MakePoint(%f, %f)::geography,
+				%f
+			)
+		`, userLng, userLat, radiusMeters)).
+		Order("d.created_at DESC").
 		Limit(params.Limit).
 		Offset(params.Offset).
 		Preload("Company").
-		Find(&dishes).Error; err != nil {
+		Find(&dishes).Error
+
+	if err != nil {
 		return nil, 0, fmt.Errorf("error al obtener platos disponibles: %w", err)
 	}
+
+	log.Printf("[DEBUG dishRepository] GetAvailableForFeed: session=%s lat=%f lng=%f radius=%dm -> found %d/%d dishes",
+		params.SessionID, userLat, userLng, int(radiusMeters), len(dishes), total)
 
 	return dishes, total, nil
 }

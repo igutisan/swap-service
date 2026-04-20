@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/google/uuid"
 	"swap/iguti/swap-service/internal/domain"
@@ -123,11 +124,20 @@ func (s *swipeSessionService) GetFeed(ctx context.Context, sessionID uuid.UUID, 
 		return nil, 0, err
 	}
 
+	log.Printf("[DEBUG GetFeed] SessionID=%s UserLat=%f UserLng=%f RadiusKm=%d",
+		sessionID, session.UserLat, session.UserLng, session.RadiusKm)
+
 	page, perPage = s.validateFeedParams(page, perPage)
 
 	dishes, total, err := s.getAvailableDishes(ctx, session, page, perPage)
 	if err != nil {
 		return nil, 0, err
+	}
+
+	log.Printf("[DEBUG GetFeed] Found %d dishes (total: %d)", len(dishes), total)
+	for i, dish := range dishes {
+		log.Printf("[DEBUG GetFeed] Dish[%d] ID=%s Company=%s CompanyLat=%f CompanyLng=%f",
+			i, dish.ID, dish.Company.Name, dish.Company.Lat, dish.Company.Lng)
 	}
 
 	return dishes, total, nil

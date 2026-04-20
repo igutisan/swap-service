@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 
@@ -13,7 +14,7 @@ import (
 )
 
 const (
-	photonBaseURL = "https://photon.komoot.io/api"
+	mapboxBaseURL = "https://api.mapbox.com/search/geocode/v6/forward"
 	httpTimeout   = 10 * time.Second
 )
 
@@ -25,23 +26,41 @@ type GeocodingResult struct {
 	Country string
 }
 
-type photonResponse struct {
-	Features []photonFeature `json:"features"`
+type mapboxFeature struct {
+	Geometry struct {
+		Coordinates [2]float64 `json:"coordinates"`
+	} `json:"geometry"`
+	Properties mapboxProperties `json:"properties"`
 }
 
-type photonFeature struct {
-	Geometry   photonGeometry   `json:"geometry"`
-	Properties photonProperties `json:"properties"`
+type mapboxProperties struct {
+	Name             string `json:"name"`
+	PlaceFormatted   string `json:"place_formatted"`
+	Coordinates     mapboxCoords `json:"coordinates"`
+	Context         mapboxContext `json:"context"`
 }
 
-type photonGeometry struct {
-	Coordinates [2]float64 `json:"coordinates"`
+type mapboxCoords struct {
+	Longitude float64 `json:"longitude"`
+	Latitude  float64 `json:"latitude"`
 }
 
-type photonProperties struct {
-	Name    string `json:"name"`
-	City    string `json:"city"`
-	Country string `json:"country"`
+type mapboxContext struct {
+	Country mapboxContextItem `json:"country"`
+	Region  mapboxContextItem `json:"region"`
+	Place   mapboxContextItem `json:"place"`
+	Postcode mapboxContextItem `json:"postcode"`
+}
+
+type mapboxContextItem struct {
+	Name         string `json:"name"`
+	CountryCode  string `json:"country_code"`
+	RegionCode  string `json:"region_code"`
+}
+
+type mapboxResponse struct {
+	Type     string          `json:"type"`
+	Features []mapboxFeature `json:"features"`
 }
 
 type GeocodingService interface {
@@ -51,13 +70,19 @@ type GeocodingService interface {
 
 type geocodingService struct {
 	httpClient *http.Client
+	apiKey     string
 }
 
 func NewGeocodingService() GeocodingService {
+	apiKey := os.Getenv("GEO_API")
+	if apiKey == "" {
+		fmt.Println("[WARNING] GEO_API no configurada, el geocoding no funcionará")
+	}
 	return &geocodingService{
 		httpClient: &http.Client{
 			Timeout: httpTimeout,
 		},
+		apiKey: apiKey,
 	}
 }
 
@@ -66,8 +91,15 @@ func (s *geocodingService) Geocode(ctx context.Context, address string) (*Geocod
 		return nil, domain.ErrGeocodingEmptyAddress
 	}
 
+	if s.apiKey == "" {
+		return nil, fmt.Errorf("GEO_API no configurada en el entorno")
+	}
+
 	encodedAddress := url.QueryEscape(strings.TrimSpace(address))
-	requestURL := fmt.Sprintf("%s?q=%s&limit=1", photonBaseURL, encodedAddress)
+	requestURL := fmt.Sprintf(
+		"%s?q=%s&access_token=%s&country=CO&limit=1&language=es&types=address,place,street",
+		mapboxBaseURL, encodedAddress, s.apiKey,
+	)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, requestURL, nil)
 	if err != nil {
@@ -86,27 +118,48 @@ func (s *geocodingService) Geocode(ctx context.Context, address string) (*Geocod
 		return nil, fmt.Errorf("el servicio de geocoding retornó código de estado: %d", resp.StatusCode)
 	}
 
-	var photonResp photonResponse
-	if err := json.NewDecoder(resp.Body).Decode(&photonResp); err != nil {
+	var mapboxResp mapboxResponse
+	if err := json.NewDecoder(resp.Body).Decode(&mapboxResp); err != nil {
 		return nil, fmt.Errorf("error al decodificar respuesta de geocoding: %w", err)
 	}
 
-	if len(photonResp.Features) == 0 {
+	if len(mapboxResp.Features) == 0 {
 		return nil, domain.ErrGeocodingNotFound
 	}
 
-	feature := photonResp.Features[0]
+	feature := mapboxResp.Features[0]
 
-	if err := s.ValidateCoordinates(feature.Geometry.Coordinates[1], feature.Geometry.Coordinates[0]); err != nil {
+	var lng, lat float64
+	if feature.Properties.Coordinates.Longitude != 0 {
+		lng = feature.Properties.Coordinates.Longitude
+		lat = feature.Properties.Coordinates.Latitude
+	} else if len(feature.Geometry.Coordinates) == 2 {
+		lng = feature.Geometry.Coordinates[0]
+		lat = feature.Geometry.Coordinates[1]
+	} else {
+		return nil, domain.ErrGeocodingNotFound
+	}
+
+	if err := s.ValidateCoordinates(lat, lng); err != nil {
 		return nil, err
 	}
 
+	city := feature.Properties.Context.Place.Name
+	if city == "" {
+		city = "Colombia"
+	}
+
+	country := feature.Properties.Context.Country.Name
+	if country == "" {
+		country = feature.Properties.Context.Country.CountryCode
+	}
+
 	return &GeocodingResult{
-		Lat:     feature.Geometry.Coordinates[1],
-		Lng:     feature.Geometry.Coordinates[0],
+		Lat:     lat,
+		Lng:     lng,
 		Name:    feature.Properties.Name,
-		City:    feature.Properties.City,
-		Country: feature.Properties.Country,
+		City:    city,
+		Country: country,
 	}, nil
 }
 

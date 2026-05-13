@@ -42,6 +42,13 @@ func (c *UploadController) GeneratePresignedURL(ctx *gin.Context) {
 		folder = "dishes"
 	}
 
+	// Verificar si Cloudinary está configurado
+	if c.uploadService == nil {
+		resp := dto.ErrorResponse(500, "UPLOAD_NOT_CONFIGURED: El servicio de subida de imágenes (Cloudinary) no está configurado en el servidor")
+		ctx.JSON(http.StatusInternalServerError, resp)
+		return
+	}
+
 	// Generar URL presigned
 	data, err := c.uploadService.GeneratePresignedURL(ctx, folder, req.FileName, req.FileType)
 	if err != nil {

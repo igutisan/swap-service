@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/google/uuid"
 	"swap/iguti/swap-service/internal/domain"
 	"swap/iguti/swap-service/internal/utils"
 )
@@ -72,7 +73,7 @@ func (s *authService) Login(ctx context.Context, email, password string) (*domai
 }
 
 // RegisterCompany registra una nueva empresa en el sistema
-func (s *authService) RegisterCompany(ctx context.Context, name, email, password, phone, address string) (*domain.Company, error) {
+func (s *authService) RegisterCompany(ctx context.Context, name, email, password, phone, address string, lat, lng float64) (*domain.Company, error) {
 	email = strings.ToLower(strings.TrimSpace(email))
 
 	existingCompany, err := s.companyRepo.GetByEmail(ctx, email)
@@ -80,9 +81,17 @@ func (s *authService) RegisterCompany(ctx context.Context, name, email, password
 		return nil, domain.ErrEmailAlreadyExist
 	}
 
-	geocodeResult, err := s.geocodingService.Geocode(ctx, address)
-	if err != nil {
-		return nil, err
+	var finalLat, finalLng float64
+	if lat != 0 || lng != 0 {
+		finalLat = lat
+		finalLng = lng
+	} else {
+		geocodeResult, err := s.geocodingService.Geocode(ctx, address)
+		if err != nil {
+			return nil, err
+		}
+		finalLat = geocodeResult.Lat
+		finalLng = geocodeResult.Lng
 	}
 
 	hashedPassword, err := utils.HashPassword(password)
@@ -96,8 +105,8 @@ func (s *authService) RegisterCompany(ctx context.Context, name, email, password
 		Password: hashedPassword,
 		Phone:    phone,
 		Address:  address,
-		Lat:      geocodeResult.Lat,
-		Lng:      geocodeResult.Lng,
+		Lat:      finalLat,
+		Lng:      finalLng,
 	}
 
 	if err := s.companyRepo.Create(ctx, company); err != nil {
@@ -126,4 +135,24 @@ func (s *authService) LoginCompany(ctx context.Context, email, password string) 
 	}
 
 	return company, token, nil
+}
+
+func (s *authService) UpdateUserAvatar(ctx context.Context, userID uuid.UUID, avatarURL string) error {
+	user, err := s.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		return err
+	}
+
+	user.AvatarURL = avatarURL
+	return s.userRepo.Update(ctx, user)
+}
+
+func (s *authService) UpdateCompanyLogo(ctx context.Context, companyID uuid.UUID, logoURL string) error {
+	company, err := s.companyRepo.GetByID(ctx, companyID)
+	if err != nil {
+		return err
+	}
+
+	company.LogoURL = logoURL
+	return s.companyRepo.Update(ctx, company)
 }

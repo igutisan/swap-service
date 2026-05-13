@@ -77,39 +77,48 @@ func (r *dishRepository) GetAvailableForFeed(ctx context.Context, params domain.
 	userLat := params.UserLat
 	radiusMeters := float64(params.RadiusKm) * 1000
 
-	subquerySwiped := r.db.WithContext(ctx).
-		Table("swipe_actions").
-		Select("dish_id").
-		Where("session_id = ?", params.SessionID)
+	// Debug: Check total dishes in DB
+	var dbTotal int64
+	r.db.WithContext(ctx).Model(&domain.Dish{}).Count(&dbTotal)
+	var dbActive int64
+	r.db.WithContext(ctx).Model(&domain.Dish{}).Where("is_active = ?", true).Count(&dbActive)
+	log.Printf("[DEBUG GetAvailableForFeed] Total dishes in DB: %d, Active: %d", dbTotal, dbActive)
 
+	// Get swiped dish IDs
+	var swipedIDs []uuid.UUID
 	r.db.WithContext(ctx).
-		Model(&domain.Dish{}).
-		Table("dishes d").
-		Joins("INNER JOIN companies c ON d.company_id = c.id").
-		Where("d.is_active = ?", true).
-		Where("d.id NOT IN (?)", subquerySwiped).
-		Where(fmt.Sprintf(`
-			ST_DWithin(
-				ST_MakePoint(c.lng, c.lat)::geography,
-				ST_MakePoint(%f, %f)::geography,
-				%f
-			)
-		`, userLng, userLat, radiusMeters)).
-		Count(&total)
+		Table("swipe_actions").
+		Where("session_id = ?", params.SessionID).
+		Pluck("dish_id", &swipedIDs)
 
-	err := r.db.WithContext(ctx).
+	query := r.db.WithContext(ctx).
 		Model(&domain.Dish{}).
 		Table("dishes d").
 		Joins("INNER JOIN companies c ON d.company_id = c.id").
-		Where("d.is_active = ?", true).
-		Where("d.id NOT IN (?)", subquerySwiped).
-		Where(fmt.Sprintf(`
-			ST_DWithin(
-				ST_MakePoint(c.lng, c.lat)::geography,
-				ST_MakePoint(%f, %f)::geography,
-				%f
-			)
-		`, userLng, userLat, radiusMeters)).
+		Where("d.is_active = ?", true)
+
+	if len(swipedIDs) > 0 {
+		query = query.Where("d.id NOT IN (?)", swipedIDs)
+	}
+
+	spatialFilter := fmt.Sprintf(`
+		ST_DWithin(
+			ST_SetSRID(ST_MakePoint(c.lng, c.lat), 4326)::geography,
+			ST_SetSRID(ST_MakePoint(%f, %f), 4326)::geography,
+			%f
+		)
+	`, userLng, userLat, radiusMeters)
+
+	query = query.Where(spatialFilter)
+
+	// Count total available
+	if err := query.Count(&total).Error; err != nil {
+		log.Printf("[ERROR GetAvailableForFeed] Count error: %v", err)
+		return nil, 0, err
+	}
+
+	// Fetch page
+	err := query.
 		Order("d.created_at DESC").
 		Limit(params.Limit).
 		Offset(params.Offset).
@@ -120,8 +129,17 @@ func (r *dishRepository) GetAvailableForFeed(ctx context.Context, params domain.
 		return nil, 0, fmt.Errorf("error al obtener platos disponibles: %w", err)
 	}
 
-	log.Printf("[DEBUG dishRepository] GetAvailableForFeed: session=%s lat=%f lng=%f radius=%dm -> found %d/%d dishes",
-		params.SessionID, userLat, userLng, int(radiusMeters), len(dishes), total)
+	log.Printf("[DEBUG dishRepository] GetAvailableForFeed: session=%s lat=%f lng=%f radius=%dm -> found %d/%d dishes (swiped=%d)",
+		params.SessionID, userLat, userLng, int(radiusMeters), len(dishes), total, len(swipedIDs))
+
+	// Debug: If total is 0, let's see distances of all active dishes
+	if total == 0 && dbActive > 0 {
+		var allActive []domain.Dish
+		r.db.WithContext(ctx).Preload("Company").Where("is_active = ?", true).Find(&allActive)
+		for _, ad := range allActive {
+			log.Printf("[DEBUG GetAvailableForFeed] Active Dish: %s, Company: %s, Lat: %f, Lng: %f", ad.Name, ad.Company.Name, ad.Company.Lat, ad.Company.Lng)
+		}
+	}
 
 	return dishes, total, nil
 }

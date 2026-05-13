@@ -12,6 +12,7 @@ type User struct {
 	Email        string    `gorm:"type:varchar(255);not null;uniqueIndex" json:"email"`
 	Password     string    `gorm:"type:varchar(255);not null" json:"-"`
 	Phone        string    `gorm:"type:varchar(50)" json:"phone"`
+	AvatarURL    string    `gorm:"type:varchar(500)" json:"avatar_url"`
 	CreatedAt    time.Time `gorm:"type:timestamp;not null;default:now()" json:"created_at"`
 
 	// Relaciones

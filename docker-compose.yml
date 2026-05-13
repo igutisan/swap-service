@@ -30,9 +30,9 @@ services:
     environment:
       # Database configuration
       DB_HOST: postgres
-      DB_USER: ${DB_USER}
-      DB_PASSWORD: ${DB_PASSWORD}
-      DB_NAME: ${DB_NAME}
+      DB_USER: swap_user
+      DB_PASSWORD: swap_password
+      DB_NAME: swap_service
       DB_PORT: 5432
       DB_SSLMODE: disable
       

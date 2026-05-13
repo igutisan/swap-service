@@ -254,11 +254,20 @@ func (c *DishController) Update(ctx *gin.Context) {
 		return
 	}
 
+	// Obtener el companyID del contexto
+	companyIDStr := ctx.GetString("companyID")
+	companyID, err := uuid.Parse(companyIDStr)
+	if err != nil {
+		resp := dto.ErrorResponse(401, "UNAUTHORIZED: ID de compañía inválido en token")
+		ctx.JSON(http.StatusUnauthorized, resp)
+		return
+	}
+
 	// Obtener request validado del contexto
 	req := middleware.GetValidatedRequest(ctx).(*dto.UpdateDishRequest)
 
 	// Llamar al servicio
-	dish, err := c.dishService.Update(ctx, id, req.Name, req.Description, req.Price, req.PhotoURL)
+	dish, err := c.dishService.Update(ctx, id, companyID, req.Name, req.Description, req.Price, req.PhotoURL)
 	if err != nil {
 		resp := dto.ErrorResponse(500, "INTERNAL_ERROR", dto.WithErrors(err.Error()))
 		ctx.JSON(http.StatusInternalServerError, resp)

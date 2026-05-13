@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"swap/iguti/swap-service/internal/domain"
 	"swap/iguti/swap-service/internal/dto"
 	"swap/iguti/swap-service/internal/middleware"
@@ -104,10 +105,11 @@ func (c *AuthController) Login(ctx *gin.Context) {
 		ExpiresIn: 86400,
 		ActorType: utils.ActorTypeUser,
 		User: dto.UserInfo{
-			ID:    user.ID,
-			Name:  user.Name,
-			Email: user.Email,
-			Phone: user.Phone,
+			ID:        user.ID,
+			Name:      user.Name,
+			Email:     user.Email,
+			Phone:     user.Phone,
+			AvatarURL: user.AvatarURL,
 		},
 	}
 	resp := dto.SuccessResponse(
@@ -138,6 +140,7 @@ func (c *AuthController) SetupProfileRoutes(router *gin.RouterGroup, userAuthMid
 	user.Use(userAuthMiddleware)
 	{
 		user.GET("/profile", c.GetUserProfile)
+		user.PATCH("/avatar", middleware.ValidationMiddleware(&dto.UpdateAvatarRequest{}), c.UpdateUserAvatar)
 	}
 
 	// Rutas de empresa (protegidas con CompanyAuthMiddleware)
@@ -145,6 +148,7 @@ func (c *AuthController) SetupProfileRoutes(router *gin.RouterGroup, userAuthMid
 	company.Use(companyAuthMiddleware)
 	{
 		company.GET("/profile", c.GetCompanyProfile)
+		company.PATCH("/logo", middleware.ValidationMiddleware(&dto.UpdateAvatarRequest{}), c.UpdateCompanyLogo)
 	}
 }
 
@@ -163,7 +167,7 @@ func (c *AuthController) SetupProfileRoutes(router *gin.RouterGroup, userAuthMid
 func (c *AuthController) RegisterCompany(ctx *gin.Context) {
 	req := middleware.GetValidatedRequest(ctx).(*dto.RegisterCompanyRequest)
 
-	company, err := c.authService.RegisterCompany(ctx, req.Name, req.Email, req.Password, req.Phone, req.Address)
+	company, err := c.authService.RegisterCompany(ctx, req.Name, req.Email, req.Password, req.Phone, req.Address, req.Lat, req.Lng)
 	if err != nil {
 		switch {
 		case errors.Is(err, domain.ErrEmailAlreadyExist):
@@ -274,6 +278,7 @@ func (c *AuthController) GetUserProfile(ctx *gin.Context) {
 		Name:      userData.Name,
 		Email:     userData.Email,
 		Phone:     userData.Phone,
+		AvatarURL: userData.AvatarURL,
 		CreatedAt: userData.CreatedAt.Format("2006-01-02T15:04:05Z"),
 	}
 
@@ -319,5 +324,69 @@ func (c *AuthController) GetCompanyProfile(ctx *gin.Context) {
 		dto.WithData(data),
 		dto.WithMessage("Perfil obtenido exitosamente"),
 	)
+	ctx.JSON(http.StatusOK, resp)
+}
+
+// UpdateUserAvatar godoc
+// @Summary Actualiza el avatar del usuario autenticado
+// @Description Cambia la URL de la foto de perfil del usuario actual
+// @Tags user
+// @Accept json
+// @Produce json
+// @Param request body dto.UpdateAvatarRequest true "Nueva URL del avatar"
+// @Success 200 {object} dto.APIResponse
+// @Failure 401 {object} dto.APIResponse
+// @Failure 500 {object} dto.APIResponse
+// @Router /user/avatar [patch]
+func (c *AuthController) UpdateUserAvatar(ctx *gin.Context) {
+	userIDStr := ctx.GetString("userID")
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		resp := dto.ErrorResponse(401, "UNAUTHORIZED: ID de usuario inválido")
+		ctx.JSON(http.StatusUnauthorized, resp)
+		return
+	}
+
+	req := middleware.GetValidatedRequest(ctx).(*dto.UpdateAvatarRequest)
+
+	if err := c.authService.UpdateUserAvatar(ctx, userID, req.URL); err != nil {
+		resp := dto.ErrorResponse(500, "INTERNAL_ERROR: No se pudo actualizar el avatar", dto.WithErrors(err.Error()))
+		ctx.JSON(http.StatusInternalServerError, resp)
+		return
+	}
+
+	resp := dto.SuccessResponse(dto.WithMessage("Avatar actualizado exitosamente"))
+	ctx.JSON(http.StatusOK, resp)
+}
+
+// UpdateCompanyLogo godoc
+// @Summary Actualiza el logo de la empresa autenticada
+// @Description Cambia la URL del logo de la empresa actual
+// @Tags company
+// @Accept json
+// @Produce json
+// @Param request body dto.UpdateAvatarRequest true "Nueva URL del logo"
+// @Success 200 {object} dto.APIResponse
+// @Failure 401 {object} dto.APIResponse
+// @Failure 500 {object} dto.APIResponse
+// @Router /company/logo [patch]
+func (c *AuthController) UpdateCompanyLogo(ctx *gin.Context) {
+	companyIDStr := ctx.GetString("companyID")
+	companyID, err := uuid.Parse(companyIDStr)
+	if err != nil {
+		resp := dto.ErrorResponse(401, "UNAUTHORIZED: ID de empresa inválido")
+		ctx.JSON(http.StatusUnauthorized, resp)
+		return
+	}
+
+	req := middleware.GetValidatedRequest(ctx).(*dto.UpdateAvatarRequest)
+
+	if err := c.authService.UpdateCompanyLogo(ctx, companyID, req.URL); err != nil {
+		resp := dto.ErrorResponse(500, "INTERNAL_ERROR: No se pudo actualizar el logo", dto.WithErrors(err.Error()))
+		ctx.JSON(http.StatusInternalServerError, resp)
+		return
+	}
+
+	resp := dto.SuccessResponse(dto.WithMessage("Logo actualizado exitosamente"))
 	ctx.JSON(http.StatusOK, resp)
 }

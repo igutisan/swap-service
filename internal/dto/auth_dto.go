@@ -18,6 +18,11 @@ type LoginRequest struct {
 	Password string `json:"password" validate:"required,min=8,max=100"`
 }
 
+// UpdateAvatarRequest representa la petición para actualizar la foto de perfil o logo
+type UpdateAvatarRequest struct {
+	URL string `json:"url" validate:"required,url"`
+}
+
 // ==================== DATA RESPONSES ====================
 
 // RegisterUserData representa los datos de respuesta después de registrar un usuario
@@ -40,21 +45,24 @@ type LoginData struct {
 
 // UserInfo representa la información del usuario en la respuesta
 type UserInfo struct {
-	ID    uuid.UUID `json:"id"`
-	Name  string    `json:"name"`
-	Email string    `json:"email"`
-	Phone string    `json:"phone,omitempty"`
+	ID        uuid.UUID `json:"id"`
+	Name      string    `json:"name"`
+	Email     string    `json:"email"`
+	Phone     string    `json:"phone,omitempty"`
+	AvatarURL string    `json:"avatar_url,omitempty"`
 }
 
 // ==================== COMPANY REQUESTS ====================
 
 // RegisterCompanyRequest representa la petición para registrar una nueva empresa
 type RegisterCompanyRequest struct {
-	Name     string `json:"name" validate:"required,min=2,max=100"`
-	Email    string `json:"email" validate:"required,email,max=255"`
-	Password string `json:"password" validate:"required,min=8,max=100"`
-	Phone    string `json:"phone" validate:"omitempty,max=50"`
-	Address  string `json:"address" validate:"required,max=500"`
+	Name     string  `json:"name" validate:"required,min=2,max=100"`
+	Email    string  `json:"email" validate:"required,email,max=255"`
+	Password string  `json:"password" validate:"required,min=8,max=100"`
+	Phone    string  `json:"phone" validate:"omitempty,max=50"`
+	Address  string  `json:"address" validate:"required,max=500"`
+	Lat      float64 `json:"lat" validate:"omitempty"`
+	Lng      float64 `json:"lng" validate:"omitempty"`
 }
 
 // LoginCompanyRequest representa la petición para iniciar sesión como empresa
@@ -104,6 +112,7 @@ type UserProfileData struct {
 	Name      string    `json:"name"`
 	Email     string    `json:"email"`
 	Phone     string    `json:"phone,omitempty"`
+	AvatarURL string    `json:"avatar_url,omitempty"`
 	CreatedAt string    `json:"created_at"`
 }
 

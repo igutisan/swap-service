@@ -105,8 +105,10 @@ type MatchRepository interface {
 type AuthService interface {
 	RegisterUser(ctx context.Context, name, email, password, phone string) (*User, error)
 	Login(ctx context.Context, email, password string) (*User, string, error)
-	RegisterCompany(ctx context.Context, name, email, password, phone, address string) (*Company, error)
+	RegisterCompany(ctx context.Context, name, email, password, phone, address string, lat, lng float64) (*Company, error)
 	LoginCompany(ctx context.Context, email, password string) (*Company, string, error)
+	UpdateUserAvatar(ctx context.Context, userID uuid.UUID, avatarURL string) error
+	UpdateCompanyLogo(ctx context.Context, companyID uuid.UUID, logoURL string) error
 }
 
 // DishService define las operaciones de negocio para platos
@@ -115,7 +117,7 @@ type DishService interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*Dish, error)
 	GetByCompanyID(ctx context.Context, companyID uuid.UUID) ([]Dish, error)
 	GetActiveByCompanyID(ctx context.Context, companyID uuid.UUID) ([]Dish, error)
-	Update(ctx context.Context, id uuid.UUID, name, description string, price float64, photoURL string) (*Dish, error)
+	Update(ctx context.Context, id uuid.UUID, companyID uuid.UUID, name, description string, price float64, photoURL string) (*Dish, error)
 	Delete(ctx context.Context, id uuid.UUID, companyID uuid.UUID) error
 	ToggleActive(ctx context.Context, id uuid.UUID, companyID uuid.UUID) (*Dish, error)
 }

@@ -85,11 +85,16 @@ func (s *dishService) GetActiveByCompanyID(ctx context.Context, companyID uuid.U
 	return dishes, nil
 }
 
-func (s *dishService) Update(ctx context.Context, id uuid.UUID, name, description string, price float64, photoURL string) (*domain.Dish, error) {
+func (s *dishService) Update(ctx context.Context, id uuid.UUID, companyID uuid.UUID, name, description string, price float64, photoURL string) (*domain.Dish, error) {
 	// Obtener el plato existente
 	dish, err := s.dishRepo.GetByID(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("plato no encontrado: %w", err)
+	}
+
+	// Verificar pertenencia
+	if dish.CompanyID != companyID {
+		return nil, fmt.Errorf("no tienes permiso para editar este plato")
 	}
 
 	// Actualizar campos si se proporcionan

@@ -1,7 +1,7 @@
 package domain
 
 const (
-	MaxRadiusKm     = 50
+	MaxRadiusKm     = 500
 	DefaultRadiusKm = 10
 	MinRadiusKm     = 1
 
